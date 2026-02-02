@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Mylitta — Учёт заказов</title>
+
+<style>
+:root {
+--brand: #ff6fb1;
+--brand-dark: #e85fa0;
+--bg: #fff7fc;
+--card: #ffffff;
+--border: #ffd3ea;
+--text: #333;
+--text-light: #777;
+--success: #c8f7c5;
+--shadow: 0 4px 14px rgba(255, 111, 177, 0.15);
+}
+
+* {
+box-sizing: border-box;
+}
+
+body {
+margin: 0;
+padding: 0;
+background: var(--bg);
+font-family: "Segoe UI", sans-serif;
+color: var(--text);
+}
+
+/* Центрируем заголовок */
+.header {
+background: var(--brand);
+padding: 22px 24px;
+color: white;
+font-size: 32px;
+font-weight: 700;
+letter-spacing: 0.5px;
+box-shadow: 0 4px 12px rgba(255, 111, 177, 0.4);
+text-align: center;
+}
+
+.container {
+margin: 20px;
+}
+
+.toolbar {
+background: var(--card);
+padding: 12px;
+border-radius: 12px;
+box-shadow: var(--shadow);
+border: 1px solid var(--border);
+display: flex;
+flex-wrap: wrap;
+gap: 10px;
+margin-bottom: 18px;
+align-items: center;
+}
+
+input, select, textarea {
+padding: 8px 10px;
+border-radius: 8px;
+border: 1px solid var(--border);
+font-size: 14px;
+background: #fff;
+transition: 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+border-color: var(--brand);
+box-shadow: 0 0 0 3px rgba(255, 111, 177, 0.25);
+outline: none;
+}
+
+button {
+padding: 9px 16px;
+border-radius: 10px;
+border: none;
+background: var(--brand);
+color: white;
+font-size: 14px;
+cursor: pointer;
+transition: 0.2s;
+box-shadow: var(--shadow);
+white-space: nowrap;
+}
+
+button:hover {
+background: var(--brand-dark);
+}
+
+.table-wrapper {
+background: var(--card);
+border-radius: 12px;
+box-shadow: var(--shadow);
+border: 1px solid var(--border);
+overflow: auto;
+}
+
+table {
+width: 100%;
+border-collapse: collapse;
+background: var(--card);
+}
+
+th {
+background: #ffe3f2;
+padding: 8px;
+font-weight: 600;
+border-bottom: 2px solid var(--border);
+font-size: 13px;
+text-align: center;
+white-space: nowrap;
+}
+
+td {
+padding: 6px;
+border-bottom: 1px solid var(--border);
+text-align: center;
+vertical-align: middle;
+}
+
+tr:nth-child(even) {
+background: #fffafd;
+}
+
+.paid-row {
+background: var(--success) !important;
+}
+
+textarea.cell-items {
+min-height: 40px;
+max-height: 120px;
+resize: vertical;
+width: 100%;
+}
+
+input.cell-sum {
+width: 80px;
+text-align: right;
+}
+
+</style>
+</head>
+<body>
+
+<div class="header">Mylitta — Учёт заказов</div>
+
+<div class="container">
+
+<div class="toolbar">
+<input type="text" id="searchInput" placeholder="Поиск по имени..." oninput="applyFilters()">
+
+<select id="filterPayment" onchange="applyFilters()">
+<option value="all">Все оплаты</option>
+<option value="paid">Оплачено</option>
+<option value="unpaid">Не оплачено</option>
+</select>
+
+<select id="filterSent" onchange="applyFilters()">
+<option value="all">Все отправки</option>
+<option value="sent">Отправлено</option>
+<option value="not_sent">Не отправлено</option>
+</select>
+
+<button onclick="addRow()">Добавить строку</button>
+</div>
+
+<div class="table-wrapper">
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Имя</th>
+<th>Телефон</th>
+<th>Адрес</th>
+<th>Покупки</th>
+<th>Сумма</th>
+<th>Оплата</th>
+<th>Сервис</th>
+<th>Отправка</th>
+<th>Сброс</th>
+<th>Полный сброс</th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+let counter = 1;
+
+/* Сохранение */
+function saveData() {
+const rows = [];
+document.querySelectorAll("#tableBody tr").forEach(row => {
+const cells = row.querySelectorAll("input, textarea, select");
+const rowData = [];
+cells.forEach(c => rowData.push(c.value));
+rows.push(rowData);
+});
+localStorage.setItem("ordersData", JSON.stringify(rows));
+}
+
+/* Загрузка */
+function loadData() {
+const saved = localStorage.getItem("ordersData");
+if (!saved) return;
+
+const rows = JSON.parse(saved);
+rows.forEach(data => addRow(data));
+}
+
+/* Добавление строки */
+function addRow(savedData = null) {
+const table = document.getElementById("tableBody");
+const row = document.createElement("tr");
+
+row.innerHTML = `
+<td>${counter}</td>
+<td><input type="text" class="cell-name"></td>
+<td><input type="text"></td>
+<td><input type="text"></td>
+<td><textarea class="cell-items"></textarea></td>
+<td><input type="number" class="cell-sum" readonly></td>
+
+<td>
+<select class="cell-payment" onchange="updateRowAppearance(this); saveData(); applyFilters();">
+<option value="no">Не оплачено</option>
+<option value="yes">Оплачено</option>
+</select>
+</td>
+
+<td>
+<select onchange="saveData()">
+<option>Белпочта</option>
+<option>ЕвроПочта</option>
+</select>
+</td>
+
+<td>
+<select class="cell-sent" onchange="saveData(); applyFilters()">
+<option value="no">Не отправлено</option>
+<option value="yes">Отправлено</option>
+</select>
+</td>
+
+<td><button onclick="resetPurchases(this)">Сбросить</button></td>
+<td><button onclick="resetFullRow(this)">Полный сброс</button></td>
+`;
+
+table.appendChild(row);
+
+const itemsField = row.querySelector(".cell-items");
+const sumField = row.querySelector(".cell-sum");
+
+/* Автосумма: цена через пробел */
+itemsField.addEventListener("input", () => {
+const lines = itemsField.value.split("\n");
+let total = 0;
+
+lines.forEach(line => {
+const parts = line.trim().split(" ");
+const last = parts[parts.length - 1];
+const price = parseFloat(last);
+if (!isNaN(price)) total += price;
+});
+
+sumField.value = total;
+saveData();
+});
+
+/* Восстановление данных */
+if (savedData) {
+const inputs = row.querySelectorAll("input, textarea, select");
+savedData.forEach((value, i) => inputs[i].value = value);
+updateRowAppearance(row.querySelector(".cell-payment"));
+}
+
+row.querySelectorAll("input, textarea").forEach(el => {
+el.addEventListener("input", saveData);
+});
+
+counter++;
+saveData();
+}
+
+/* Подсветка */
+function updateRowAppearance(select) {
+const row = select.closest("tr");
+if (select.value === "yes") row.classList.add("paid-row");
+else row.classList.remove("paid-row");
+}
+
+/* Сброс покупок */
+function resetPurchases(btn) {
+const row = btn.closest("tr");
+row.querySelector(".cell-items").value = "";
+row.querySelector(".cell-sum").value = 0;
+saveData();
+}
+
+/* Полный сброс */
+function resetFullRow(btn) {
+const row = btn.closest("tr");
+row.querySelectorAll("input, textarea").forEach(el => el.value = "");
+row.querySelector(".cell-payment").value = "no";
+row.querySelector(".cell-sent").value = "no";
+row.classList.remove("paid-row");
+saveData();
+applyFilters();
+}
+
+/* Фильтры */
+function applyFilters() {
+const searchValue = document.getElementById("searchInput").value.toLowerCase();
+const paymentFilter = document.getElementById("filterPayment").value;
+const sentFilter = document.getElementById("filterSent").value;
+
+document.querySelectorAll("#tableBody tr").forEach(row => {
+let visible = true;
+
+const name = row.querySelector(".cell-name").value.toLowerCase();
+const payment = row.querySelector(".cell-payment").value;
+const sent = row.querySelector(".cell-sent").value;
+
+if (searchValue && !name.includes(searchValue)) visible = false;
+if (paymentFilter === "paid" && payment !== "yes") visible = false;
+if (paymentFilter === "unpaid" && payment !== "no") visible = false;
+if (sentFilter === "sent" && sent !== "yes") visible = false;
+if (sentFilter === "not_sent" && sent !== "no") visible = false;
+
+row.style.display = visible ? "" : "none";
+});
+}
+
+loadData();
+</script>
+
+</body>
+</html>
